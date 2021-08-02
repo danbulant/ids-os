@@ -1,0 +1,2 @@
+
+require("./wm/tiny");
