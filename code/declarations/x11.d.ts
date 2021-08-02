@@ -171,11 +171,11 @@ declare module "x11" {
     interface MotionNotifyEvent extends MotionEvent {
         name: "MotionNotify";
     }
-    type Event = 
+    export type Event = 
         ConfigureRequestEvent | PropertyNotifyEvent |
         SelectionClearEvent | SelectionRequestEvent | SelectionNotifyEvent |
-        MappingNotifyEvent | MapRequestEvent | DestroyNotifyEvent | CreateNotifyEvent | MapNotifyEvent | UnmapNotifyEvent
-        EXposeEvent | LeaveNotifyEvent | EnterNotifyEvent |
+        MappingNotifyEvent | MapRequestEvent | DestroyNotifyEvent | CreateNotifyEvent | MapNotifyEvent | UnmapNotifyEvent |
+        ExposeEvent | LeaveNotifyEvent | EnterNotifyEvent |
         KeyPressEvent | KeyReleaseEvent |
         ButtonReleaseEvent | ButtonPressEvent |
         MotionNotifyEvent | ClientMessageEvent;
@@ -190,7 +190,7 @@ declare module "x11" {
         depth: number;
     }
     interface KeyList {}
-    interface WindowAttributes {
+    interface XWindowAttributes {
         eventMask: EventMask;
         backgroundPixmap;
         backgroundPixel?: number;
@@ -208,25 +208,89 @@ declare module "x11" {
         cursor;
     }
 
+    interface WindowAttributes {
+        backingStore: 0;
+        visual: number;
+        klass: number;
+        bitGravity: number;
+        winGravity: number;
+        backingPlanes: number;
+        backingPixel: number;
+        saveUnder: boolean;
+        mapIsInstalled: boolean;
+        mapState: number;
+        overrideRedirect: boolean;
+        colormap: number;
+        allEventMasks: number;
+        myEventMasks: number;
+        doNotPropagateMask: number;
+    }
+
     export interface XClient {
         on(event: "event", cb: (event: Event) => void): XClient;
         on(event: string, cb: Function): XClient;
         AllocID(): WindowNumber;
         ReleaseID(): WindowNumber;
 
+        CreateWindow(window: WindowNumber, x: number, y: number, width: number, height: number, borderWidth: number, depth: number, winclass: number, visual: number, valuemask: number, attributes: WindowAttributes)
         RaiseWindow(window: WindowNumber);
+        ResizeWindow(window: WindowNumber, width: number, height: number);
         MoveResizeWindow(window: WindowNumber, x: number, y: number, width: number, height: number);
+        MoveWindow(window: WindowNumber, x: number, y: number);
+        DestroyWindow(window: WindowNumber);
         GetGeometry(window: WindowNumber, cb: (err: Error, geometry: WindowGeometry) => void);
         
         GetKeyboardMapping(minKeycode: number, number: number, cb: (err: Error, list: KeyList) => void);
         SetInputFocus(window: WindowNumber);
 
-        ChangeWindowAttributes(window: WindowNumber, attributes: any, cb?: (err: Error) => void);
-        GetWindowAttributes(window: WindowNumber, cb: (err: Error, attributes: any) => void);
+        ChangeWindowAttributes(window: WindowNumber, attributes: XWindowAttributes, cb?: (err: Error) => void);
+        GetWindowAttributes(window: WindowNumber, cb: (err: Error, attributes: WindowAttributes) => void);
 
+        ChangeSaveSet(changeMode: number, window: WindowNumber);
+
+        ReparentWindow(window: WindowNumber, parent: WindowNumber, x: number, y: number);
+
+        MapWindow(window: WindowNumber);
+        UnmapWindow(window: WindowNumber);
+
+        GrabButton(window: WindowNumber, ownerEvents: boolean, mask: number, pointerMode: GrabMode, keybMode: GrabMode, confineTo: WindowNumber, cursor, button: number, modifiers: number);
+        UngrabButton(window: WindowNumber, button: number, modifiers: number);
     }
 
-    enum EventMask {
+    enum GrabMode {
+        GrabModeSync = 0,
+        GrabModeAsync = 1
+    }
+
+    export enum EventMask {
+        KeyPress = 0x00000001,
+        KeyRelease = 0x00000002,
+        ButtonPress = 0x00000004,
+        ButtonRelease = 0x00000008,
+        EnterWindow = 0x00000010,
+        LeaveWindow = 0x00000020,
+        PointerMotion = 0x00000040,
+        PointerMotionHint = 0x00000080,
+        Button1Motion = 0x00000100,
+        Button2Motion = 0x00000200,
+        Button3Motion = 0x00000400,
+        Button4Motion = 0x00000800,
+        Button5Motion = 0x00001000,
+        ButtonMotion = 0x00002000,
+        KeymapState = 0x00004000,
+        Exposure = 0x00008000,
+        VisibilityChange = 0x00010000,
+        StructureNotify = 0x00020000,
+        ResizeRedirect = 0x00040000,
+        SubstructureNotify = 0x00080000,
+        SubstructureRedirect = 0x00100000,
+        FocusChange = 0x00200000,
+        PropertyChange = 0x00400000,
+        ColormapChange = 0x00800000,
+        OwnerGrabButton = 0x01000000
+    };
+    // Typescript doesn't have enum aliases.
+    export enum eventMask {
         KeyPress = 0x00000001,
         KeyRelease = 0x00000002,
         ButtonPress = 0x00000004,
