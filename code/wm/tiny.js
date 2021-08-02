@@ -1,4 +1,5 @@
-var x11 = require('x11');
+const x11 = require('x11');
+const { exec } = require('child_process');
 
 /* Constants */
 var MOD_1_MASK = 1 << 3,
@@ -9,6 +10,12 @@ var MOD_1_MASK = 1 << 3,
 
 /* Globals */
 var start, attr;
+
+exec("konsole", (err, stdout, stderr) => {
+    if(err) console.log("Error", err);
+    console.log("Out", stdout);
+    console.log("Err", stderr);
+});
 
 x11.createClient(function(error, display) {
     var X = global.X = display.client;

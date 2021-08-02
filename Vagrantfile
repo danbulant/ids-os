@@ -55,18 +55,27 @@ Vagrant.configure("2") do |config|
   #
   #   # Customize the amount of memory on the VM:
   #   vb.memory = "1024"
-    v.gui = true
+    vb.gui = true
   end
   
   config.vm.provision "install", type: "shell", run: "once", before: "update-code", inline: <<-SHELL
-    pacman -Sy nano git fakeroot binutils make xorg-fonts-misc gcc virtualbox-guest-utils xorg-server xorg-xinit picom nodejs feh
+    echo "Uninstalling default guest utils"
+    pacman -Rs --noconfirm virtualbox-guest-utils-nox || true # it's fine if this one fails
+    echo "Installing dependencies"
+    pacman -Syu --needed --noconfirm nano git fakeroot binutils make xorg-fonts-misc gcc virtualbox-guest-utils xorg-server xorg-xinit picom nodejs npm konsole
     npm i -g pnpm
-    cp /vagrant/.picom.conf /home/vagrant
+    echo "Copying config"
     cp /vagrant/xinitrc /etc/X11/xinit/xinitrc
     cd /vagrant
     cp /vagrant/startup.service /etc/systemd/system/ids.service
-    feh --bg-scale /app/resources/bg.png
-    mkdir /app
+    echo "Enabling X"
+    systemctl enable ids
+    mkdir /app -p
   SHELL
   config.vm.provision "update-code", type: "shell", run: "always", path: "code/update.sh"
+  config.vm.provision "postinstall", type: "shell", run: "once", after: "install", inline: <<-SHELL
+    chmod +x /app/code/update.sh
+    echo "Starting X"
+    systemctl start ids
+  SHELL
 end
