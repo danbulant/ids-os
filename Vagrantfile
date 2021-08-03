@@ -62,7 +62,7 @@ Vagrant.configure("2") do |config|
     echo "Uninstalling default guest utils"
     pacman -Rs --noconfirm virtualbox-guest-utils-nox || true # it's fine if this one fails
     echo "Installing dependencies"
-    pacman -Syu --needed --noconfirm nano git fakeroot binutils make xorg-fonts-misc gcc virtualbox-guest-utils xorg-server xorg-xinit picom nodejs npm konsole
+    pacman -Syu --needed --noconfirm nano git fakeroot binutils make xorg-fonts-misc gcc virtualbox-guest-utils xorg-server xorg-xinit picom nodejs npm konsole feh
     npm i -g pnpm
     echo "Copying config"
     cp /vagrant/xinitrc /etc/X11/xinit/xinitrc

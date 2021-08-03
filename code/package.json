@@ -10,6 +10,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "fs-extra": "^10.0.0",
+    "level": "^7.0.0",
     "x11": "^2.3.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^9.0.12"
   }
 }
