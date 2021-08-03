@@ -15,7 +15,6 @@ class XData {
     
     async loadBg() {
         this.bg = this.conf.get("background", "location") || FileData.path.getResource("images/bg.png");
-        console.log("Setting background", this.bg);
         await exec(["feh", "--bg-scale", this.bg]);
     }
 }
