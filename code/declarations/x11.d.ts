@@ -13,7 +13,9 @@ declare module "x11" {
     }
 
     interface BaseEvent {
-        name: string
+        name: string;
+        type: number;
+        rawData: Buffer;
     }
     interface WindowEvent extends BaseEvent {
         wid: WindowNumber;

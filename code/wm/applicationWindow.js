@@ -20,14 +20,13 @@ module.exports = class ApplicationWindow extends Window {
          */
         this.dragStart = null;
         this.changeAttributes({
-            eventMask: x11.eventMask.PropertyChange | x11.eventMask.FocusChange | x11.eventMask.SubstructureNotify
+            eventMask: x11.eventMask.PropertyChange | x11.eventMask.FocusChange | x11.eventMask.StructureNotify
         }).catch(e => console.warn(e));
         
         this.on("event", async (/** @type {import("x11").Event */ev) => {
             if(ev.name === "ButtonPress" || ev.name === "FocusIn") {
                 this.frame.raise();
                 this.focusInput();
-                console.log("Window focus");
             } else if(ev.name === "UnmapNotify") {
                 this.unmap();
             } else if(ev.name === "MapNotify") {
@@ -37,17 +36,14 @@ module.exports = class ApplicationWindow extends Window {
                 this.X.Render.FreePicture(framepic);
                 delete this.X.event_consumers[this.wid];
             } else if(ev.name === "PropertyNotify") {
-                console.log(ev);
                 const atom = ev.atom;
                 try {
                     const val = await this.X.GetProperty(false, this.wid, atom, 0, 0, 512);
-                    console.log("Got property", val);
                     console.log(`${this.title} | CHANGED ATOM:${atom} TYPE:${await getAtomName(val.type)} ${await getAtomName(atom)} =`, await getContents(this.wid, atom));
                 } catch(e) {
                     console.warn(e);
                 }
 
-                console.log("Checking property");
                 if(atom === await internAtom("WM_NAME")) {
                     this.title = await this.getProperty("_NET_WM_NAME");
                     if(!this.title) {
@@ -55,9 +51,7 @@ module.exports = class ApplicationWindow extends Window {
                         this.render();
                     }
                 } else if(atom === await internAtom("_NET_WM_NAME")) {
-                    console.log("Getting property value");
                     this.title = await this.getProperty("_NET_WM_NAME");
-                    console.log("Updating");
                     this.render();
                 }
             }
@@ -127,8 +121,9 @@ module.exports = class ApplicationWindow extends Window {
                 this.frame.raise();
                 this.focusInput();
             } else if(ev.name === "ButtonPress" && ev.keycode === 1) {
-                var relativeX = ev.rootx - winX;
-                var relativeY = ev.rooty - winY;
+                await this.frame.getGeometry();
+                var relativeX = ev.rootx - this.frame.x;
+                var relativeY = ev.rooty - this.frame.y;
                 if(
                     width - relativeX < 20 &&
                     width - relativeX > barWidth &&
@@ -264,7 +259,8 @@ module.exports = class ApplicationWindow extends Window {
         return res;
     }
     move(x, y) {
-        return this.frame.move(x, y);
+        this.frame.move(x, y);
+        return super.move(barWidth / 2, barHeight); // not moving it at all results in weird popup behavior
     }
     resize(width, height) {
         this.frame.resize(width, height);

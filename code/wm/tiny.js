@@ -34,7 +34,6 @@ async function ManageWindow(wid, shouldMap = false) {
         console.warn("Attribute fetch", e);
         return;
     }
-    console.log("Starting to manage window", wid);
     var window = new ApplicationWindow(wid, X, screen);
     windows[window.wid] = window;
     var winX, winY;
@@ -43,8 +42,8 @@ async function ManageWindow(wid, shouldMap = false) {
     await window.createFrame(winX, winY);
 
     if(shouldMap) {
-        console.log("Mapping window", wid, X.seq_num + 1);
         window.map();
+        window.focusInput();
     }
 }
 
@@ -69,7 +68,7 @@ x11.createClient(async function (err, display) {
     root = screen.root;
 
     console.log('root = ' + root);
-    X.ChangeWindowAttributes(root, { eventMask: x11.eventMask.Exposure | x11.eventMask.SubstructureRedirect }).catch(e => {
+    X.ChangeWindowAttributes(root, { eventMask: x11.eventMask.Exposure | x11.eventMask.SubstructureRedirect | x11.eventMask.FocusChange }).catch(e => {
         if (e.error == 10) {
             console.error('Error: another window manager already running.');
             process.exit(1);
@@ -93,6 +92,19 @@ x11.createClient(async function (err, display) {
 }).on('error', function (err) {
     console.error(err);
 }).on('event', function (ev) {
+    if (ev.type === 9) {
+        ev.name = "FocusIn";
+        ev.detail = ev.rawData.readUInt8(1);
+        ev.seq = ev.rawData.readUInt16LE(2);
+        ev.wid = ev.rawData.readUInt32LE(4);
+        ev.mode = ev.rawData.readUInt8(8);
+    } else if (ev.type === 10) {
+        ev.name = "FocusOut";
+        ev.detail = ev.rawData.readUInt8(1);
+        ev.seq = ev.rawData.readUInt16LE(2);
+        ev.wid = ev.rawData.readUInt32LE(4);
+        ev.mode = ev.rawData.readUInt8(8);
+    }
     if (ev.name === "MapRequest") // MapRequest
     {
         if (!windows[ev.wid])
