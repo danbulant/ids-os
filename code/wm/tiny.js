@@ -20,6 +20,7 @@ process.on("unhandledRejection", (reason, promise) => {
 var /** @type {import("x11").XPromisifiedClient} */X, /** @type {number} */root, /** @type {number} */white;
 var screen;
 
+/** @type {{ [key: number]: Window }} */
 var windows = {};
 async function ManageWindow(wid, shouldMap = false) {
     try {
@@ -68,7 +69,7 @@ x11.createClient(async function (err, display) {
     root = screen.root;
 
     console.log('root = ' + root);
-    X.ChangeWindowAttributes(root, { eventMask: x11.eventMask.Exposure | x11.eventMask.SubstructureRedirect | x11.eventMask.FocusChange }).catch(e => {
+    X.ChangeWindowAttributes(root, { eventMask: x11.eventMask.Exposure | x11.eventMask.SubstructureRedirect | x11.eventMask.StructureNotify | x11.eventMask.SubstructureNotify | x11.eventMask.FocusChange }).catch(e => {
         if (e.error == 10) {
             console.error('Error: another window manager already running.');
             process.exit(1);
