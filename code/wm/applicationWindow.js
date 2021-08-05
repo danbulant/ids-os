@@ -162,7 +162,6 @@ module.exports = class ApplicationWindow extends Window {
                 if(this.maximized && Math.abs(xDiff) < snappiness * 2 && Math.abs(yDiff) < snappiness * 2) return;
 
                 if(this.maximized) {
-                    console.log(`Moving ${this.dragStart.rootx} ${this.dragStart.width} ${this.unmaximizedGeometry.width} ${(this.dragStart.rootx / this.dragStart.width) * this.unmaximizedGeometry.width}`)
                     this.dragStart.rootx = (this.dragStart.rootx / this.dragStart.width) * this.unmaximizedGeometry.width;
                     this.dragStart.rootx = Math.round(this.dragStart.rootx);
                     relativeX = this.dragStart.rootx - this.dragStart.winX;
