@@ -25,12 +25,21 @@ module.exports = class Window extends EventEmitter {
         this.height = -1;
         this.x = -1;
         this.y = -1;
+        this.aboveSibling = 0;
         this.depth = -1;
 
         this.on("event", (/** @type {import("x11").Event} */ev) => {
             switch(ev.name) {
                 case "DestroyNotify":
                     delete this.X.event_consumers[wid];
+                    break;
+                case "ConfigureNotify":
+                    if(this.wid !== ev.wid1) return;
+                    this.width = ev.width;
+                    this.height = ev.height;
+                    this.x = ev.x;
+                    this.y = ev.y;
+                    this.aboveSibling = ev.aboveSibling;
                     break;
             }
         });
@@ -104,6 +113,13 @@ module.exports = class Window extends EventEmitter {
     }
 
     async getGeometry() {
+        if(this.width > -1) return {
+            width: this.width,
+            height: this.height,
+            xPos: this.x,
+            yPos: this.y,
+            depth: this.depth
+        };
         const geo = await this.X.GetGeometry(this.wid);
         this.width = geo.width;
         this.height = geo.height;
