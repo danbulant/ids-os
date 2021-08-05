@@ -9,14 +9,13 @@ const events = x11.eventMask.Button1Motion | x11.eventMask.ButtonPress | x11.eve
 module.exports = class ApplicationWindow extends Window {
     constructor(wid, X, screen) {
         super(wid, X, screen);
-        console.log("App created", this.wid);
         this.title = "";
         /**
          * @type {Window}
          */
         this.frame = null;
         /**
-         * @type {{ keycode: number, rootx: number, rooty: number, x: number, y: number, winX: number, winY: number, width: number, height: number } | null}
+         * @type {{ keycode: number, rootx: number, rooty: number, x: number, y: number, winX: number, winY: number, width: number, height: number, maximized: boolean } | null}
          */
         this.dragStart = null;
         this.changeAttributes({
@@ -75,20 +74,16 @@ module.exports = class ApplicationWindow extends Window {
         var fid = this.X.AllocID();
         var width = clientGeom.width + barWidth;
         var height = clientGeom.height + barHeight + barWidth / 2;
-        console.log(clientGeom);
-        console.log("Creating frame", fid, this.X.seq_num + 1);
         this.X.CreateWindow(fid, this.screen.root, winX, winY, width, height, 0, 0, 0, 0, {
             backgroundPixel: this.screen.white_pixel,
             eventMask: events
         });
-        console.log("Frame created", fid);
 
         this.title = await this.getProperty("_NET_WM_NAME");
         if(!this.title) {
             this.title = await this.getProperty("WM_NAME");
             render();
         }
-        console.log("Window title", this.title);
         this.frame = new Window(fid, this.X, this.screen);
         await this.frame.getGeometry();
 
@@ -138,7 +133,18 @@ module.exports = class ApplicationWindow extends Window {
                         console.log("Title double clicked", this.lastClick, Date.now());
                     }
                     this.lastClick = Date.now();
-                    this.dragStart = { keycode: ev.keycode, rootx: ev.rootx, rooty: ev.rooty, x: ev.x, y: ev.y, winX: this.frame.x, winY: this.frame.y, width: this.frame.width, height: this.frame.height };
+                    this.dragStart = {
+                        keycode: ev.keycode,
+                        rootx: ev.rootx,
+                        rooty: ev.rooty,
+                        x: ev.x,
+                        y: ev.y,
+                        winX: this.frame.x,
+                        winY: this.frame.y,
+                        width: this.frame.width,
+                        height: this.frame.height,
+                        maximized: this.maximized
+                    };
                 }
             } else if("ButtonPress" && ev.keycode === 2) {
                 this.close();
@@ -150,58 +156,69 @@ module.exports = class ApplicationWindow extends Window {
                 var yDiff = ev.rooty - this.dragStart.rooty;
                 var relativeX = this.dragStart.rootx - this.dragStart.winX;
                 var relativeY = this.dragStart.rooty - this.dragStart.winY;
+                const snappiness = 10;
+
+                // require minimum movement
+                if(this.maximized && Math.abs(xDiff) < snappiness * 2 && Math.abs(yDiff) < snappiness * 2) return;
+
+                if(this.maximized) {
+                    console.log(`Moving ${this.dragStart.rootx} ${this.dragStart.width} ${this.unmaximizedGeometry.width} ${(this.dragStart.rootx / this.dragStart.width) * this.unmaximizedGeometry.width}`)
+                    this.dragStart.rootx = (this.dragStart.rootx / this.dragStart.width) * this.unmaximizedGeometry.width;
+                    this.dragStart.rootx = Math.round(this.dragStart.rootx);
+                    relativeX = this.dragStart.rootx - this.dragStart.winX;
+                    this.unmaximize();
+                }
+
                 var width = this.frame.width;
                 var height = this.frame.height;
                 var winX = this.frame.x;
                 var winY = this.frame.y;
 
                 var rootGeom = await this.root.getGeometry();
-                const snappiness = 10;
 
-                if(relativeX <= barWidth) {
-                    width = this.dragStart.width - xDiff;
-                    winX = this.dragStart.winX + xDiff;
-
-                    if(Math.abs(rootGeom.xPos - winX) <= snappiness) {
-                        width = this.dragStart.width + this.dragStart.winX;
-                        winX = rootGeom.xPos;
-                    }
-                }
-                if(relativeY <= barWidth) {
-                    height = this.dragStart.height - yDiff;
-                    winY = this.dragStart.winY + yDiff;
-
-                    if(Math.abs(rootGeom.yPos - winY) <= snappiness) {
-                        height = this.dragStart.height + this.dragStart.winY;
-                        winY = rootGeom.yPos;
-                    }
-                }
-                if(this.dragStart.width - relativeX <= barWidth) {
-                    width = this.dragStart.width + xDiff;
-
-                    if(Math.abs(rootGeom.width + rootGeom.yPos - width - winY) <= snappiness) {
-                        width = rootGeom.width + rootGeom.yPos - winY;
-                    }
-                }
-                if(this.dragStart.height - relativeY <= barWidth) {
-                    height = this.dragStart.height + yDiff;
-
-                    if(Math.abs(rootGeom.height + rootGeom.xPos - height - winX) <= snappiness) {
-                        height = rootGeom.height + rootGeom.xPos - winX;
-                    }
-                }
-                if(!((relativeX <= barWidth) || (relativeY <= barWidth) || (this.dragStart.width - relativeX <= barWidth) || (this.dragStart.height - relativeY <= barWidth))) {
+                if(this.dragStart.maximized || !((relativeX <= barWidth) || (relativeY <= barWidth) || (this.dragStart.width - relativeX <= barWidth) || (this.dragStart.height - relativeY <= barWidth))) {
                     winY = this.dragStart.winY + yDiff;
                     winX = this.dragStart.winX + xDiff;
 
                     // Snap to edges
-                    if(Math.abs(rootGeom.xPos - winX) <= snappiness) winX = rootGeom.xPos;
-                    if(Math.abs(rootGeom.yPos - winY) <= snappiness) winY = rootGeom.yPos;
+                    if(Math.abs(winX - rootGeom.xPos) <= snappiness) winX = rootGeom.xPos;
+                    if(winY - rootGeom.yPos <= snappiness) winY = rootGeom.yPos;
                     if(Math.abs(rootGeom.xPos + rootGeom.width - winX - width) <= snappiness) winX = rootGeom.xPos + rootGeom.width - width;
                     if(Math.abs(rootGeom.yPos + rootGeom.height - winY - height) <= snappiness) winY = rootGeom.yPos + rootGeom.height - height;
+                } else {
+                    if(relativeX <= barWidth) {
+                        width = this.dragStart.width - xDiff;
+                        winX = this.dragStart.winX + xDiff;
+                        
+                        if(Math.abs(rootGeom.xPos - winX) <= snappiness) {
+                            width = this.dragStart.width + this.dragStart.winX;
+                            winX = rootGeom.xPos;
+                        }
+                    }
+                    if(relativeY <= barWidth) {
+                        height = this.dragStart.height - yDiff;
+                        winY = this.dragStart.winY + yDiff;
+                        
+                        if(Math.abs(rootGeom.yPos - winY) <= snappiness) {
+                            height = this.dragStart.height + this.dragStart.winY;
+                            winY = rootGeom.yPos;
+                        }
+                    }
+                    if(this.dragStart.width - relativeX <= barWidth) {
+                        width = this.dragStart.width + xDiff;
+                        
+                        if(Math.abs(rootGeom.width + rootGeom.yPos - width - winY) <= snappiness) {
+                            width = rootGeom.width + rootGeom.yPos - winY;
+                        }
+                    }
+                    if(this.dragStart.height - relativeY <= barWidth) {
+                        height = this.dragStart.height + yDiff;
+                        
+                        if(Math.abs(rootGeom.height + rootGeom.xPos - height - winX) <= snappiness) {
+                            height = rootGeom.height + rootGeom.xPos - winX;
+                        }
+                    }
                 }
-
-                console.log(`${this.title} M ${this.dragStart.rootx}/${this.dragStart.winX} ${this.dragStart.rooty}/${this.dragStart.winY} ${relativeX}/${this.dragStart.width} ${relativeY}/${this.dragStart.height} MoveResize ${fid} ${winX} ${winY} ${width} ${height}`);
                 this.moveResize(winX, winY, width, height);
             } else if (ev.name === "Expose") {
                 this.render();
