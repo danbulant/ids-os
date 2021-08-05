@@ -33,6 +33,16 @@ declare module "x11" {
         borderWidth: number;
         mask: number;
     }
+    interface ConfigureNotifyEvent extends WindowEVent {
+        wid1: WindowNumber;
+        aboveSibling: number;
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        borderWidth: number;
+        overrideRedirect: boolean;
+    }
     interface PropertyNotifyEvent extends WindowEvent {
         name: "PropertyNotify";
         wid: WindowNumber;
@@ -209,7 +219,7 @@ declare module "x11" {
         name: "FocusOut";
     }
     export type Event = 
-        ConfigureRequestEvent | PropertyNotifyEvent |
+        ConfigureRequestEvent | ConfigureNotifyEvent | PropertyNotifyEvent |
         SelectionClearEvent | SelectionRequestEvent | SelectionNotifyEvent |
         MappingNotifyEvent | MapRequestEvent | DestroyNotifyEvent | CreateNotifyEvent | MapNotifyEvent | UnmapNotifyEvent |
         ExposeEvent | LeaveNotifyEvent | EnterNotifyEvent |
