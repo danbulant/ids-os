@@ -16,7 +16,7 @@ declare module "x11" {
         name: string
     }
     interface WindowEvent extends BaseEvent {
-        child: WindowNumber;
+        wid: WindowNumber;
     }
     interface ConfigureRequestEvent extends WindowEvent {
         name: "ConfigureRequest";
@@ -267,6 +267,7 @@ declare module "x11" {
     export interface XClient {
         Composite: CompositeExtension;
         Render: RenderExtension;
+        hasCompositor: boolean;
         displayNum: number;
         screenNum: number;
         atoms: {
